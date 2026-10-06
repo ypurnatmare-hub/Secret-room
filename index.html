@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Секретная комната — Режим тестирования</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: linear-gradient(135deg, #e0e7ff 0%, #f5f3ff 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    color: #2d3748;
+    user-select: none;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+    color: #4c51bf;
+    letter-spacing: 1px;
+  }
+
+  .test-badge {
+    background: #ef4444;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    margin-left: 10px;
+    animation: blink 1.5s infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .main-layout {
+    display: flex;
+    gap: 20px;
+    width: 100%;
+    max-width: 1400px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .game-side {
+    flex: 1;
+    min-width: 320px;
+    max-width: 900px;
+  }
+
+  .test-side {
+    width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .status-bar {
+    background: white;
+    padding: 10px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    margin-bottom: 15px;
+    font-size: 0.95rem;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .status-bar span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #cbd5e0;
+    transition: background 0.3s;
+  }
+
+  .dot.active { background: #48bb78; box-shadow: 0 0 8px #48bb78; }
+
+  .room {
+    position: relative;
+    width: 100%;
+    height: 520px;
+    background: linear-gradient(to bottom, #fef3c7 0%, #fde68a 60%, #92400e 60%, #78350f 100%);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    border: 3px solid #d69e2e;
+  }
+
+  .wall-decor {
+    position: absolute;
+    top: 40px;
+    left: 50px;
+    width: 120px;
+    height: 80px;
+    background: linear-gradient(135deg, #a78bfa, #7c3aed);
+    border: 6px solid #4c1d95;
+    border-radius: 4px;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+  }
+
+  .shelf {
+    position: absolute;
+    top: 180px;
+    left: 30px;
+    width: 180px;
+    height: 12px;
+    background: linear-gradient(to bottom, #78350f, #451a03);
+    border-radius: 2px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  }
+
+  .book {
+    position: absolute;
+    bottom: 12px;
+    width: 18px;
+    height: 40px;
+    border-radius: 2px;
+  }
+
+  .key {
+    position: absolute;
+    top: 140px;
+    left: 100px;
+    width: 70px;
+    height: 70px;
+    cursor: grab;
+    transition: transform 0.3s, filter 0.3s;
+    z-index: 5;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+  }
+
+  .key:hover {
+    transform: scale(1.1) rotate(-10deg);
+    filter: drop-shadow(0 6px 10px rgba(250, 204, 21, 0.6));
+  }
+
+  .key.dragging {
+    cursor: grabbing;
+    transition: none;
+    z-index: 100;
+  }
+
+  .key.found { animation: bounce 0.6s ease; }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px) rotate(20deg); }
+  }
+
+  .key-badge {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: #48bb78;
+    color: white;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+
+  .key.found .key-badge { display: flex; }
+
+  .doorway {
+    position: absolute;
+    right: 80px;
+    bottom: 0;
+    width: 180px;
+    height: 340px;
+    background: #1a202c;
+    border-radius: 8px 8px 0 0;
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
+  }
+
+  .door {
+    position: absolute;
+    right: 80px;
+    bottom: 0;
+    width: 180px;
+    height: 340px;
+    background: linear-gradient(to right, #92400e, #b45309, #92400e);
+    border: 3px solid #451a03;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    transform-origin: left center;
+    transition: transform 1s ease;
+    z-index: 3;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  }
+
+  .door:hover:not(.open) { filter: brightness(1.1); }
+  .door.open { transform: perspective(1000px) rotateY(-75deg); }
+
+  .door-panel {
+    position: absolute;
+    top: 30px;
+    left: 20px;
+    right: 20px;
+    height: 120px;
+    border: 2px solid #451a03;
+    border-radius: 4px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.2));
+  }
+
+  .door-panel-2 { top: 180px; }
+
+  .handle {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    background: radial-gradient(circle at 30% 30%, #fbbf24, #b45309);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  }
+
+  .lock {
+    position: absolute;
+    right: 25px;
+    top: calc(50% - 40px);
+    width: 22px;
+    height: 28px;
+    background: radial-gradient(circle at 30% 30%, #fbbf24, #78350f);
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .lock::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 10px;
+    background: #1a202c;
+    border-radius: 3px 3px 0 0;
+  }
+
+  .lock.highlight {
+    transform: scale(1.4);
+    box-shadow: 0 0 20px #fbbf24, 0 0 40px #fbbf24;
+    animation: pulse 1s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1.4); }
+    50% { transform: scale(1.6); }
+  }
+
+  .gift-area {
+    position: absolute;
+    right: 110px;
+    bottom: 40px;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    opacity: 0;
+    transform: scale(0.3);
+    transition: opacity 0.8s ease 0.5s, transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s;
+  }
+
+  .gift-area.visible { opacity: 1; transform: scale(1); }
+
+  .gift {
+    width: 100px;
+    height: 100px;
+    position: relative;
+    animation: float 2s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .gift-box {
+    position: absolute;
+    bottom: 0;
+    width: 100px;
+    height: 70px;
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    border-radius: 4px;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+  }
+
+  .gift-box::before {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 14px;
+    background: linear-gradient(to right, #fbbf24, #f59e0b);
+  }
+
+  .gift-lid {
+    position: absolute;
+    top: 0;
+    left: -4px;
+    width: 108px;
+    height: 22px;
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    border-radius: 4px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  }
+
+  .gift-lid::before {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 14px;
+    background: linear-gradient(to right, #fbbf24, #f59e0b);
+  }
+
+  .bow {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 20px;
+  }
+
+  .bow::before, .bow::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 18px;
+    height: 18px;
+    background: #fbbf24;
+    border-radius: 50% 50% 50% 0;
+  }
+
+  .bow::before { left: 0; transform: rotate(-45deg); }
+  .bow::after { right: 0; transform: rotate(45deg); }
+
+  .message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: white;
+    padding: 20px 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #4c51bf;
+    z-index: 200;
+    opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+    pointer-events: none;
+    text-align: center;
+    border: 3px solid #4c51bf;
+  }
+
+  .message.show {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+
+  .message.success {
+    color: #2f855a;
+    border-color: #48bb78;
+    background: linear-gradient(135deg, #f0fff4, white);
+  }
+
+  .message.warning {
+    color: #c53030;
+    border-color: #fc8181;
+    background: linear-gradient(135deg, #fff5f5, white);
+  }
+
+  .hint {
+    margin-top: 15px;
+    padding: 10px 20px;
+    background: white;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    color: #4a5568;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    text-align: center;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hint strong { color: #4c51bf; }
+
+  .confetti {
+    position: absolute;
+    width: 10px; height: 10px;
+    top: -20px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .confetti.active { animation: fall 3s linear forwards; }
+
+  @keyframes fall {
+    0% { transform: translateY(0) rotate(0); opacity: 1; }
+    100% { transform: translateY(600px) rotate(720deg); opacity: 0; }
+  }
+
+  /* ============ ТЕСТОВАЯ ПАНЕЛЬ ============ */
+  .panel {
+    background: #1a202c;
+    color: #e2e8f0;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    font-size: 0.85rem;
+  }
+
+  .panel h3 {
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+    color: #90cdf4;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2d3748;
+  }
+
+  .state-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .state-item {
+    background: #2d3748;
+    padding: 8px 10px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .state-item .label { color: #a0aec0; font-size: 0.8rem; }
+
+  .state-item .value {
+    font-weight: bold;
+    font-family: 'Consolas', monospace;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+  }
+
+  .value.true { background: #276749; color: #9ae6b4; }
+  .value.false { background: #742a2a; color: #feb2b2; }
+
+  .btn-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.2s;
+    font-family: inherit;
+  }
+
+  .btn:hover { filter: brightness(1.1); }
+  .btn:active { transform: scale(0.96); }
+
+  .btn-primary { background: #4299e1; color: white; }
+  .btn-success { background: #48bb78; color: white; }
+  .btn-danger { background: #f56565; color: white; }
+  .btn-warning { background: #ed8936; color: white; }
+  .btn-purple { background: #9f7aea; color: white; }
+
+  .log-box {
+    background: #0d1117;
+    border-radius: 6px;
+    padding: 8px;
+    height: 180px;
+    overflow-y: auto;
+    font-family: 'Consolas', monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+
+  .log-entry {
+    padding: 2px 0;
+    border-bottom: 1px dashed #2d3748;
+    display: flex;
+    gap: 6px;
+  }
+
+  .log-time { color: #718096; }
+  .log-action { color: #90cdf4; }
+  .log-result { color: #9ae6b4; }
+  .log-error { color: #fc8181; }
+  .log-info { color: #f6e05e; }
+
+  .checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: #2d3748;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .check-item:hover { background: #4a5568; }
+
+  .check-box {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #4a5568;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+
+  .check-item.passed .check-box {
+    background: #48bb78;
+    border-color: #48bb78;
+    color: white;
+  }
+
+  .check-item.passed .check-label {
+    color: #9ae6b4;
+    text-decoration: line-through;
+  }
+
+  .check-label { flex: 1; color: #cbd5e0; }
+
+  .counter {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: #2d3748;
+    border-radius: 6px;
+    margin-bottom: 6px;
+  }
+
+  .counter .num {
+    color: #f6e05e;
+    font-weight: bold;
+    font-family: 'Consolas', monospace;
+  }
+
+  .scenario-btn {
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    margin-bottom: 4px;
+  }
+
+  details summary {
+    cursor: pointer;
+    padding: 4px 0;
+    color: #90cdf4;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  details summary:hover { color: #bee3f8; }
+</style>
+</head>
+<body>
+
+<h1>🔐 Секретная комната <span class="test-badge">TEST MODE</span></h1>
+
+<div class="main-layout">
+
+  <!-- ИГРОВАЯ СТОРОНА -->
+  <div class="game-side">
+    <div class="status-bar">
+      <span><span class="dot" id="dot-key"></span> Ключ</span>
+      <span><span class="dot" id="dot-door"></span> Дверь</span>
+      <span><span class="dot" id="dot-gift"></span> Подарок</span>
+    </div>
+
+    <div class="room" id="room">
+      <div class="wall-decor"></div>
+      <div class="shelf">
+        <div class="book" style="left: 10px; background: #3b82f6;"></div>
+        <div class="book" style="left: 35px; background: #10b981;"></div>
+        <div class="book" style="left: 60px; background: #f59e0b;"></div>
+        <div class="book" style="left: 85px; background: #ef4444;"></div>
+        <div class="book" style="left: 110px; background: #8b5cf6;"></div>
+      </div>
+
+      <div class="key" id="key" title="Нажми, чтобы найти ключ">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="keyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#fde047"/>
+              <stop offset="50%" style="stop-color:#fbbf24"/>
+              <stop offset="100%" style="stop-color:#b45309"/>
+            </linearGradient>
+          </defs>
+          <circle cx="25" cy="50" r="18" fill="url(#keyGrad)" stroke="#78350f" stroke-width="2"/>
+          <circle cx="25" cy="50" r="8" fill="#fef3c7" stroke="#78350f" stroke-width="1.5"/>
+          <rect x="40" y="46" width="45" height="8" fill="url(#keyGrad)" stroke="#78350f" stroke-width="1.5"/>
+          <rect x="75" y="54" width="4" height="10" fill="url(#keyGrad)" stroke="#78350f" stroke-width="1"/>
+          <rect x="82" y="54" width="4" height="14" fill="url(#keyGrad)" stroke="#78350f" stroke-width="1"/>
+        </svg>
+        <div class="key-badge">✓</div>
+      </div>
+
+      <div class="doorway"></div>
+      <div class="gift-area" id="gift">
+        <div class="gift">
+          <div class="gift-box"></div>
+          <div class="gift-lid"></div>
+          <div class="bow"></div>
+        </div>
+      </div>
+
+      <div class="door" id="door" title="Дверь">
+        <div class="door-panel"></div>
+        <div class="door-panel door-panel-2"></div>
+        <div class="lock" id="lock"></div>
+        <div class="handle"></div>
+      </div>
+
+      <div class="message" id="message"></div>
+    </div>
+
+    <div class="hint" id="hint">
+      💡 <strong>Подсказка:</strong> Нажми на ключ, чтобы его найти. Затем перетащи его к замочной скважине двери.
+    </div>
+  </div>
+
+  <!-- ТЕСТОВАЯ ПАНЕЛЬ -->
+  <div class="test-side">
+
+    <!-- Состояние -->
+    <div class="panel">
+      <h3>📊 Текущее состояние</h3>
+      <div class="state-grid">
+        <div class="state-item">
+          <span class="label">keyFound</span>
+          <span class="value false" id="st-key">false</span>
+        </div>
+        <div class="state-item">
+          <span class="label">doorOpened</span>
+          <span class="value false" id="st-door">false</span>
+        </div>
+        <div class="state-item">
+          <span class="label">giftVisible</span>
+          <span class="value false" id="st-gift">false</span>
+        </div>
+        <div class="state-item">
+          <span class="label">questDone</span>
+          <span class="value false" id="st-quest">false</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Счётчики -->
+    <div class="panel">
+      <h3>📈 Счётчики</h3>
+      <div class="counter"><span>Кликов по ключу:</span><span class="num" id="cnt-key">0</span></div>
+      <div class="counter"><span>Кликов по двери:</span><span class="num" id="cnt-door">0</span></div>
+      <div class="counter"><span>Перетаскиваний:</span><span class="num" id="cnt-drag">0</span></div>
+      <div class="counter"><span>Ошибок порядка:</span><span class="num" id="cnt-err">0</span></div>
+    </div>
+
+    <!-- Управление -->
+    <div class="panel">
+      <h3>🎮 Управление состоянием</h3>
+      <div class="btn-row" style="margin-bottom: 6px;">
+        <button class="btn btn-success" onclick="forceKey()">Ключ = найден</button>
+        <button class="btn btn-danger" onclick="forceNoKey()">Ключ = не найден</button>
+      </div>
+      <div class="btn-row" style="margin-bottom: 6px;">
+        <button class="btn btn-primary" onclick="forceOpen()">Дверь = открыть</button>
+        <button class="btn btn-warning" onclick="forceClose()">Дверь = закрыть</button>
+      </div>
+      <div class="btn-row" style="margin-bottom: 6px;">
+        <button class="btn btn-purple" onclick="forceGift()">Показать подарок</button>
+        <button class="btn btn-danger" onclick="resetAll()">🔄 Полный сброс</button>
+      </div>
+    </div>
+
+    <!-- Тест-кейсы -->
+    <div class="panel">
+      <h3>✅ Чек-лист тест-кейсов</h3>
+      <div class="checklist" id="checklist">
+        <div class="check-item" data-id="tc1" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <span class="check-label">Клик по двери без ключа → отказ</span>
+        </div>
+        <div class="check-item" data-id="tc2" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <span class="check-label">Клик по ключу → найден</span>
+        </div>
+        <div class="check-item" data-id="tc3" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <span class="check-label">Перетащить ключ к замку → дверь открыта</span>
+        </div>
+        <div class="check-item" data-id="tc4" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <span class="check-label">Клик по двери с ключом → открыта</span>
+        </div>
+        <div class="check-item" data-id="tc5" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <span class="check-label">Подарок появляется после открытия</span>
+        </div>
+        <div class="check-item" data-id="tc6" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <span class="check-label">Сообщение «Квест завершён»</span>
+        </div>
+        <div class="check-item" data-id="tc7" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <span class="check-label">Повторный клик по двери не ломает</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Автотесты -->
+    <div class="panel">
+      <h3>⚡ Автосценарии</h3>
+      <button class="btn btn-primary scenario-btn" onclick="runScenario('happy')">🎯 Сценарий: Успешный путь</button>
+      <button class="btn btn-warning scenario-btn" onclick="runScenario('wrong')">⚠️ Сценарий: Ошибка порядка</button>
+      <button class="btn btn-purple scenario-btn" onclick="runScenario('stress')">💥 Стресс-тест (10 кликов)</button>
+    </div>
+
+    <!-- Лог -->
+    <div class="panel">
+      <h3>📝 Лог событий <button class="btn btn-danger" style="margin-left:auto;padding:2px 8px;font-size:0.7rem;" onclick="clearLog()">очистить</button></h3>
+      <div class="log-box" id="log"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const key = document.getElementById('key');
+  const door = document.getElementById('door');
+  const lock = document.getElementById('lock');
+  const gift = document.getElementById('gift');
+  const message = document.getElementById('message');
+  const room = document.getElementById('room');
+  const hint = document.getElementById('hint');
+  const dotKey = document.getElementById('dot-key');
+  const dotDoor = document.getElementById('dot-door');
+  const dotGift = document.getElementById('dot-gift');
+
+  // Состояния
+  let keyFound = false;
+  let doorOpened = false;
+  let giftVisible = false;
+  let questDone = false;
+  let isDragging = false;
+  let dragOffsetX = 0;
+  let dragOffsetY = false;
+
+  // Счётчики
+  let counters = { key: 0, door: 0, drag: 0, err: 0 };
+
+  // ===== ЛОГИРОВАНИЕ =====
+  function log(action, result, type = 'action') {
+    const logBox = document.getElementById('log');
+    const time = new Date().toLocaleTimeString('ru-RU', {hour12: false}) + '.' + String(Date.now() % 1000).padStart(3, '0');
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="log-time">[${time}]</span><span class="log-${type}">${action} → ${result}</span>`;
+    logBox.appendChild(entry);
+    logBox.scrollTop = logBox.scrollHeight;
+    // Ограничим 200 записями
+    while (logBox.children.length > 200) logBox.removeChild(logBox.firstChild);
+  }
+
+  function clearLog() {
+    document.getElementById('log').innerHTML = '';
+    log('Система', 'лог очищен', 'info');
+  }
+
+  // ===== ОБНОВЛЕНИЕ UI =====
+  function updateStatus() {
+    dotKey.classList.toggle('active', keyFound);
+    dotDoor.classList.toggle('active', doorOpened);
+    dotGift.classList.toggle('active', giftVisible);
+
+    // Состояние
+    setVal('st-key', keyFound);
+    setVal('st-door', doorOpened);
+    setVal('st-gift', giftVisible);
+    setVal('st-quest', questDone);
+
+    // Счётчики
+    document.getElementById('cnt-key').textContent = counters.key;
+    document.getElementById('cnt-door').textContent = counters.door;
+    document.getElementById('cnt-drag').textContent = counters.drag;
+    document.getElementById('cnt-err').textContent = counters.err;
+  }
+
+  function setVal(id, val) {
+    const el = document.getElementById(id);
+    el.textContent = val;
+    el.className = 'value ' + (val ? 'true' : 'false');
+  }
+
+  function showMessage(text, type = 'info', duration = 2000) {
+    message.textContent = text;
+    message.className = 'message ' + type + ' show';
+    clearTimeout(message._timer);
+    message._timer = setTimeout(() => {
+      message.classList.remove('show');
+    }, duration);
+  }
+
+  // ===== ДЕЙСТВИЕ 1: КЛИК ПО КЛЮЧУ =====
+  key.addEventListener('click', (e) => {
+    if (isDragging) return;
+    counters.key++;
+    if (!keyFound) {
+      keyFound = true;
+      key.classList.add('found');
+      log('Клик по ключу', 'ключ найден ✓', 'result');
+      showMessage('🔑 Ключ найден! Теперь открой дверь.', 'success');
+      hint.innerHTML = '💡 <strong>Отлично!</strong> Перетащи ключ к замочной скважине или нажми на дверь.';
+      lock.classList.add('highlight');
+    } else {
+      log('Клик по ключу', 'ключ уже найден (игнор)', 'info');
+    }
+    updateStatus();
+  });
+
+  // ===== ПЕРЕТАСКИВАНИЕ =====
+  function startDrag(e) {
+    e.preventDefault();
+    isDragging = true;
+    key.classList.add('dragging');
+    const point = e.touches ? e.touches[0] : e;
+    const rect = key.getBoundingClientRect();
+    dragOffsetX = point.clientX - rect.left;
+    dragOffsetY = point.clientY - rect.top;
+  }
+
+  function moveDrag(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    const point = e.touches ? e.touches[0] : e;
+    const roomRect = room.getBoundingClientRect();
+
+    let x = point.clientX - roomRect.left - dragOffsetX;
+    let y = point.clientY - roomRect.top - dragOffsetY;
+
+    x = Math.max(0, Math.min(x, roomRect.width - 70));
+    y = Math.max(0, Math.min(y, roomRect.height - 70));
+
+    key.style.left = x + 'px';
+    key.style.top = y + 'px';
+
+    const lockRect = lock.getBoundingClientRect();
+    const keyRect = key.getBoundingClientRect();
+    const dx = (lockRect.left + lockRect.width/2) - (keyRect.left + keyRect.width/2);
+    const dy = (lockRect.top + lockRect.height/2) - (keyRect.top + keyRect.height/2);
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist < 50 && !doorOpened) {
+      lock.style.transform = 'scale(1.6)';
+      lock.style.boxShadow = '0 0 30px #fbbf24, 0 0 60px #fbbf24';
+    } else {
+      lock.style.transform = '';
+      lock.style.boxShadow = '';
+    }
+  }
+
+  function endDrag(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    key.classList.remove('dragging');
+    counters.drag++;
+
+    const lockRect = lock.getBoundingClientRect();
+    const keyRect = key.getBoundingClientRect();
+    const dx = (lockRect.left + lockRect.width/2) - (keyRect.left + keyRect.width/2);
+    const dy = (lockRect.top + lockRect.height/2) - (keyRect.top + keyRect.height/2);
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist < 60 && keyFound && !doorOpened) {
+      log('Перетаскивание', 'ключ у замка → открытие двери', 'result');
+      openDoor();
+    } else if (dist < 60 && !keyFound) {
+      log('Перетаскивание', 'ключ не найден → отказ', 'error');
+      counters.err++;
+      returnKey();
+    } else {
+      log('Перетаскивание', 'ключ не у замка → возврат', 'info');
+      returnKey();
+    }
+    updateStatus();
+  }
+
+  function returnKey() {
+    key.style.transition = 'left 0.5s, top 0.5s';
+    key.style.left = '100px';
+    key.style.top = '140px';
+    setTimeout(() => { key.style.transition = ''; }, 500);
+    lock.style.transform = '';
+    lock.style.boxShadow = '';
+  }
+
+  key.addEventListener('mousedown', startDrag);
+  document.addEventListener('mousemove', moveDrag);
+  document.addEventListener('mouseup', endDrag);
+  key.addEventListener('touchstart', startDrag, {passive: false});
+  document.addEventListener('touchmove', moveDrag, {passive: false});
+  document.addEventListener('touchend', endDrag);
+
+  // ===== ДЕЙСТВИЕ 2: КЛИК ПО ДВЕРИ =====
+  door.addEventListener('click', () => {
+    counters.door++;
+    if (doorOpened) {
+      log('Клик по двери', 'дверь уже открыта (игнор)', 'info');
+      updateStatus();
+      return;
+    }
+    if (!keyFound) {
+      counters.err++;
+      log('Клик по двери', 'ключ не найден → отказ', 'error');
+      showMessage('🔒 Сначала найди ключ!', 'warning');
+      door.animate(
+        [{transform: 'translateX(0)'}, {transform: 'translateX(-5px)'}, {transform: 'translateX(5px)'}, {transform: 'translateX(0)'}],
+        {duration: 300}
+      );
+    } else {
+      log('Клик по двери', 'ключ есть → открытие', 'result');
+      openDoor();
+    }
+    updateStatus();
+  });
+
+  // ===== ОТКРЫТИЕ ДВЕРИ =====
+  function openDoor() {
+    if (doorOpened) return;
+    doorOpened = true;
+    door.classList.add('open');
+    lock.classList.remove('highlight');
+    log('Дверь', 'открыта ✓', 'result');
+    showMessage('🚪 Дверь открыта! Смотри, что внутри!', 'success', 2500);
+    hint.innerHTML = '🎉 <strong>Поздравляем!</strong> Ты нашёл секретный подарок!';
+    updateStatus();
+
+    setTimeout(() => {
+      gift.classList.add('visible');
+      giftVisible = true;
+      log('Подарок', 'появился ✓', 'result');
+      launchConfetti();
+      updateStatus();
+      setTimeout(() => {
+        questDone = true;
+        log('Квест', 'завершён ✓', 'result');
+        showMessage('✨ Квест завершён! ✨', 'success', 4000);
+        updateStatus();
+      }, 800);
+    }, 800);
+  }
+
+  function launchConfetti() {
+    const colors = ['#ef4444', '#fbbf24', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + '%';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDelay = Math.random() * 1 + 's';
+      c.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+      room.appendChild(c);
+      setTimeout(() => c.classList.add('active'), 10);
+      setTimeout(() => c.remove(), 4000);
+    }
+  }
+
+  // ===== УПРАВЛЕНИЕ СОСТОЯНИЕМ (для тестировщика) =====
+  function forceKey() {
+    keyFound = true;
+    key.classList.add('found');
+    lock.classList.add('highlight');
+    log('TEST', 'forceKey() → keyFound=true', 'info');
+    updateStatus();
+  }
+
+  function forceNoKey() {
+    keyFound = false;
+    key.classList.remove('found');
+    lock.classList.remove('highlight');
+    returnKey();
+    log('TEST', 'forceNoKey() → keyFound=false', 'info');
+    updateStatus();
+  }
+
+  function forceOpen() {
+    if (!keyFound) forceKey();
+    openDoor();
+    log('TEST', 'forceOpen() → doorOpened=true', 'info');
+  }
+
+  function forceClose() {
+    doorOpened = false;
+    giftVisible = false;
+    questDone = false;
+    door.classList.remove('open');
+    gift.classList.remove('visible');
+    log('TEST', 'forceClose() → всё сброшено кроме ключа', 'info');
+    updateStatus();
+  }
+
+  function forceGift() {
+    gift.classList.add('visible');
+    giftVisible = true;
+    questDone = true;
+    log('TEST', 'forceGift() → подарок виден', 'info');
+    updateStatus();
+  }
+
+  function resetAll() {
+    keyFound = false;
+    doorOpened = false;
+    giftVisible = false;
+    questDone = false;
+    counters = { key: 0, door: 0, drag: 0, err: 0 };
+    key.classList.remove('found');
+    door.classList.remove('open');
+    gift.classList.remove('visible');
+    lock.classList.remove('highlight');
+    returnKey();
+    hint.innerHTML = '💡 <strong>Подсказка:</strong> Нажми на ключ, чтобы его найти. Затем перетащи его к замочной скважине двери.';
+    log('TEST', 'resetAll() → полное сброс', 'info');
+    updateStatus();
+  }
+
+  // ===== ЧЕК-ЛИСТ =====
+  function toggleCheck(el) {
+    el.classList.toggle('passed');
+    const box = el.querySelector('.check-box');
+    box.textContent = el.classList.contains('passed') ? '✓' : '';
+    log('CHECK', el.querySelector('.check-label').textContent + (el.classList.contains('passed') ? ' ✓' : ' ✗'), 'info');
+  }
+
+  // ===== АВТОСЦЕНАРИИ =====
+  async function runScenario(name) {
+    resetAll();
+    log('SCENARIO', 'запуск: ' + name, 'info');
+    await sleep(300);
+
+    if (name === 'happy') {
+      // Успешный путь: клик по ключу → клик по двери
+      log('SCENARIO', 'шаг 1: клик по ключу', 'action');
+      key.click();
+      await sleep(800);
+      log('SCENARIO', 'шаг 2: клик по двери', 'action');
+      door.click();
+      await sleep(2500);
+      log('SCENARIO', 'итог: квест завершён', 'result');
+    }
+
+    if (name === 'wrong') {
+      // Ошибка порядка: клик по двери → клик по ключу → клик по двери
+      log('SCENARIO', 'шаг 1: клик по двери (без ключа)', 'action');
+      door.click();
+      await sleep(1200);
+      log('SCENARIO', 'шаг 2: клик по ключу', 'action');
+      key.click();
+      await sleep(800);
+      log('SCENARIO', 'шаг 3: клик по двери', 'action');
+      door.click();
+      await sleep(2500);
+      log('SCENARIO', 'итог: квест завершён после исправления', 'result');
+    }
+
+    if (name === 'stress') {
+      // Стресс-тест
+      log('SCENARIO', '10 быстрых кликов по двери', 'action');
+      for (let i = 0; i < 10; i++) {
+        door.click();
+        await sleep(150);
+      }
+      await sleep(500);
+      log('SCENARIO', 'клик по ключу', 'action');
+      key.click();
+      await sleep(500);
+      log('SCENARIO', 'ещё 10 кликов по двери', 'action');
+      for (let i = 0; i < 10; i++) {
+        door.click();
+        await sleep(150);
+      }
+      await sleep(2500);
+      log('SCENARIO', 'стресс-тест завершён — состояние стабильно', 'result');
+    }
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // Инициализация
+  log('Система', 'тестовый режим запущен', 'info');
+  updateStatus();
+</script>
+
+</body>
+</html>
